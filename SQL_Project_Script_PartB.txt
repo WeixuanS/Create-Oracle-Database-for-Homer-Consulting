@@ -1,0 +1,296 @@
+-----Part B Queries-----
+
+-----query 1:
+CLEAR COLUMNS
+COLUMN EMPLOYEE FORMAT A20
+BREAK ON EMPLOYEE
+SELECT  Emp_Num || ':' || Emp_Last || ' ' || Emp_First AS Employee,
+	Code,
+	Description,
+	COUNT(Train_Num) AS NO_OF_TRAININGS,
+	MAX(Date_Acquired) LATEST_DATE,
+	NVL(TRUNC(MONTHS_BETWEEN(SYSDATE,MAX(Date_Acquired)),0), 0) AS MONTHS_SINCE
+FROM EMPLOYEE JOIN TRAINING USING(Emp_Num)
+              JOIN SKILL USING(Code)
+GROUP BY Emp_Num || ':' || Emp_Last || ' ' || Emp_First, Code, Description;
+
+
+
+-----query 2:
+CLEAR COLUMNS
+
+COLUMN EMPLOYEE FORMAT A25
+COLUMN SUPERVISOR FORMAT A30
+COLUMN DEPT_NAME FORMAT A20
+
+Select  LEVEL, 
+	Name DEPT_NAME,
+	LPAD(' ', 3*(LEVEL-1)) || E.Emp_Num || ':' || E.Emp_Last || ' ' || E.Emp_First as Employee,
+	CASE WHEN S.Emp_Num IS NULL 
+	    THEN 'NA' 
+	    ELSE S.Emp_Num || ':' || S.Emp_Last || ' ' || S.Emp_First 
+	    END AS Supervisor
+From EMPLOYEE E LEFT JOIN EMPLOYEE S ON E.Super_ID = S.Emp_Num
+     JOIN DEPARTMENT D ON D.DEPT_CODE = E.DEPT_CODE
+START WITH E.Emp_Num = 1
+CONNECT BY PRIOR E.Emp_Num = E.Super_id;
+
+
+-----query 3:
+CLEAR COLUMNS
+COLUMN PROJ_NAME FORMAT A20
+COLUMN PROJ_START_DATE FORMAT A20
+COLUMN ASSIGN_MONTH FORMAT A20
+
+SELECT P.PROJ_NUMBER,
+	Name PROJ_NAME,
+	Start_Date PROJ_START_DATE,
+	ASSIGN_MONTH, EMP_COUNT, HOURS_SPENT
+FROM PROJECT P JOIN 
+               (SELECT  A.PROJ_NUMBER, 
+			TO_CHAR(Date_Assigned,'Month') || EXTRACT(YEAR FROM Date_Assigned) ASSIGN_MONTH, 
+                        COUNT(DISTINCT Emp_Num) EMP_COUNT, 
+			SUM(Hours_Used) HOURS_SPENT
+                FROM ASSIGNMENT A JOIN PROJECT P ON P.PROJ_NUMBER=A.PROJ_NUMBER 
+		WHERE P.TOTAL_COST IS NULL
+                GROUP BY A.PROJ_NUMBER, TO_CHAR(Date_Assigned,'Month') || EXTRACT(YEAR FROM Date_Assigned)
+                ) A ON P.PROJ_NUMBER = A.PROJ_NUMBER;
+
+
+-----query 4:
+CLEAR COLUMNS
+
+
+ALTER TABLE EMPLOYEE
+ADD BONUS_AMT Number (6,2);
+
+UPDATE EMPLOYEE E1
+SET E1.BONUS_AMT = (
+    SELECT A3.BONUS_AMT
+    FROM (SELECT A1.EMP_NUM, COUNT(DISTINCT PROJ_NUMBER)*200 AS BONUS_AMT
+          FROM EMPLOYEE A1 JOIN (SELECT E2.EMP_NUM, A2.PROJ_NUMBER, SUM(A2.Hours_Used) HOURS_USED
+                      		 FROM EMPLOYEE E2 JOIN ASSIGNMENT A2 ON E2.Emp_Num = A2.Emp_Num
+                                      		  JOIN PROJECT P1 ON A2.PROJ_NUMBER = P1.PROJ_NUMBER 
+                                                     		  AND EXTRACT(YEAR FROM P1.Start_Date) = EXTRACT(YEAR FROM SYSDATE) - 1
+                      		GROUP BY E2.EMP_NUM, A2.PROJ_NUMBER
+                      		HAVING SUM(A2.Hours_Used)>=40
+          			) B1 ON B1.Emp_Num = A1.Emp_Num
+           GROUP BY A1.EMP_NUM) A3
+    	   WHERE A3.EMP_NUM = E1.EMP_NUM
+	);
+
+SELECT * FROM EMPLOYEE;
+
+
+-----query 5:
+CLEAR COLUMNS
+COLUMN "EMP_NAME" FORMAT A20
+COLUMN "TRAINING_NAME" FORMAT A20
+COLUMN "DAYS_BETWEEN_DATES" FORMAT A18
+
+
+SELECT  EMP_NUM, 
+	Emp_First || ' ' || Emp_Last AS EMP_NAME, 
+	HIRE_DATE, 
+	NVL(T1.NAME,'NA') AS TRAINING_NAME,
+	NVL(TO_CHAR(Date_Acquired), 'NA') AS TRAINING_DATE,  
+	CASE WHEN Date_Acquired IS NULL 
+	     THEN 'NA' 
+	     ELSE TO_CHAR(Date_Acquired - HIRE_DATE) 
+	     END AS DAYS_BETWEEN_DATES,
+	NO_OF_PROJECTS
+FROM EMPLOYEE E1 LEFT JOIN TRAINING T1 USING(EMP_NUM)
+                 LEFT JOIN (SELECT EMP_NUM, NVL(COUNT(DISTINCT PROJ_NUMBER), 0) AS NO_OF_PROJECTS 
+                           FROM EMPLOYEE JOIN ASSIGNMENT A1 USING (EMP_NUM) 
+                           GROUP BY EMP_NUM) P1 USING(EMP_NUM)
+WHERE EXTRACT(YEAR FROM E1.Hire_Date) = EXTRACT(YEAR FROM SYSDATE) - 1;
+
+
+-----query 6:
+CLEAR COLUMNS
+COLUMN "Start_Date" FORMAT A10
+COLUMN "Total_Cost" FORMAT $999,990.99
+
+
+SELECT P1.Proj_Number, P1.Name, P1.Start_Date, Total_Cost, CASE WHEN A2.Date_Ended IS NULL THEN 'Ongoing' ELSE 'Completed' END AS Status
+FROM ASSIGNMENT A1
+JOIN ASSIGNMENT A2
+	ON A1.Proj_Number = A2.Proj_Number
+	AND A1.Emp_Num = A2.Emp_Num
+	AND A2.Date_Assigned > A1.Date_Assigned + 31
+	AND A2.Date_Assigned NOT BETWEEN A1.Date_Assigned AND A1.Date_Ended
+JOIN PROJECT P1
+	ON P1.Proj_Number = A2.Proj_Number
+ORDER BY (1);
+
+
+
+-----Q7-----
+CLEAR COLUMNS
+COLUMN Quarter FORMAT A7
+
+SELECT TO_CHAR(EXTRACT(YEAR FROM SYSDATE)) || 'Q' || TO_CHAR(Start_Date, 'Q') AS Quarter, 
+	COUNT(DISTINCT Proj_Number) AS Project_Count, 
+	COUNT(DISTINCT Emp_Num) AS Employee_Count, 
+	ROUND(NVL(SUM(Hours_Used)/COUNT(Proj_Number),0),2) AS Average_Hours_Used
+FROM PROJECT LEFT JOIN ASSIGNMENT USING(Proj_Number)
+WHERE EXTRACT(YEAR FROM Start_Date) = EXTRACT(YEAR FROM SYSDATE)
+GROUP BY TO_CHAR(EXTRACT(YEAR FROM SYSDATE)) || 'Q' || TO_CHAR(Start_Date, 'Q')
+ORDER BY (1);
+
+-----Q8-----
+CLEAR COLUMNS
+COLUMN "EMPLOYEE" FORMAT A20
+COLUMN "Basic SQL" FORMAT 999
+COLUMN "Inter SQL" FORMAT 999
+COLUMN "Advan SQL" FORMAT 999
+COLUMN "Basic R" FORMAT 999
+COLUMN "Inter R" FORMAT 999
+COLUMN "Advan R" FORMAT 999
+COLUMN "Basic Py" FORMAT 999
+COLUMN "Inter Py" FORMAT 999
+COLUMN "Advan Py" FORMAT 999
+COLUMN "Basic Java" FORMAT 999
+COLUMN "Date_Acquired" FORMAT A13
+
+
+SELECT DECODE(Emp_Num || ':' || Emp_First || ' ' || Emp_Last, NULL, 'Number of Trainings:', Emp_Num || ':' || Emp_First || ' ' || Emp_Last) Employee,
+	SUM(DECODE(Code, 'SQL_1009', 1, 0)) AS "Basic SQL",
+	CASE WHEN Emp_Num || ':' || Emp_First || ' ' || Emp_Last IS NULL
+	     THEN ' '
+	     ELSE MAX(DECODE(Code, 'SQL_1009', TO_CHAR(Date_Acquired), '---------')) 
+	     END AS "Date_Acquired",
+	SUM(DECODE(Code, 'SQL_1010', 1, 0)) AS "Advan SQL",
+	CASE WHEN Emp_Num || ':' || Emp_First || ' ' || Emp_Last IS NULL
+	     THEN ' '
+	     ELSE MAX(DECODE(Code, 'SQL_1010', TO_CHAR(Date_Acquired), '---------')) 
+	     END AS "Date_Acquired",
+	SUM(DECODE(Code, 'R_1012', 1, 0)) AS "Basic R",
+	CASE WHEN Emp_Num || ':' || Emp_First || ' ' || Emp_Last IS NULL
+	     THEN ' '
+	     ELSE MAX(DECODE(Code, 'R_1012', TO_CHAR(Date_Acquired), '---------'))
+	     END AS "Date_Acquired",
+	SUM(DECODE(Code, 'R_1013', 1, 0)) AS "Advan R",
+	CASE WHEN Emp_Num || ':' || Emp_First || ' ' || Emp_Last IS NULL
+	     THEN ' '
+	     ELSE MAX(DECODE(Code, 'R_1013', TO_CHAR(Date_Acquired), '---------'))
+	     END AS "Date_Acquired",
+	SUM(DECODE(Code, 'PY_1015', 1, 0)) AS "Basic Py",
+	CASE WHEN Emp_Num || ':' || Emp_First || ' ' || Emp_Last IS NULL
+	     THEN ' '
+	     ELSE MAX(DECODE(Code, 'PY_1015', TO_CHAR(Date_Acquired), '---------'))
+	     END AS "Date_Acquired",
+	SUM(DECODE(Code, 'PY_1016', 1, 0)) AS "Advan Py",
+	CASE WHEN Emp_Num || ':' || Emp_First || ' ' || Emp_Last IS NULL
+	     THEN ' '
+	     ELSE MAX(DECODE(Code, 'PY_1016', TO_CHAR(Date_Acquired), '---------'))
+	     END AS "Date_Acquired",
+	SUM(DECODE(Code, 'JAVA_1017', 1, 0)) AS "Basic Java",
+	CASE WHEN Emp_Num || ':' || Emp_First || ' ' || Emp_Last IS NULL
+	     THEN ' '
+	     ELSE MAX(DECODE(Code, 'JAVA_1017', TO_CHAR(Date_Acquired), '---------'))
+	     END AS "Date_Acquired",
+	SUM(DECODE(Code, NULL, 0, 1)) AS "Number of Skills"
+FROM EMPLOYEE JOIN TRAINING USING (Emp_Num)
+	      JOIN SKILL USING (Code)
+GROUP BY GROUPING SETS (Emp_Num || ':' || Emp_First || ' ' || Emp_Last, ());
+
+
+-----Q9-----
+CLEAR COLUMNS
+COLUMN "SKILL_CODE" FORMAT A10
+
+
+BREAK ON Dept_Code ON Name
+
+SELECT Dept_Code, DEPARTMENT.Name AS "DEPT_NAME", Code AS "SKILL_CODE", SKILL.Description AS "SKILL_DESC", COUNT(Train_Num) AS Training_Count, RANK() OVER(PARTITION BY Dept_Code ORDER BY COUNT(Train_Num) DESC) AS SKILL_RANK
+FROM TRAINING JOIN SKILL USING(Code)
+	      JOIN EMPLOYEE USING(Emp_Num)
+	      JOIN DEPARTMENT USING (Dept_Code)
+GROUP BY Dept_Code, DEPARTMENT.Name, Code, SKILL.Description
+ORDER BY (1);
+
+
+-----Q10-----
+CLEAR COLUMNS
+COLUMN EMPLOYEE FORMAT A20
+COLUMN SUPERVISOR FORMAT A20
+COLUMN TRAINING_NAME FORMAT A20
+COLUMN TRAINING_DATE FORMAT A13
+COLUMN SKILL FORMAT A30
+
+BREAK ON Employee ON Supervisor
+
+SELECT  E1.Emp_Num||':'||E1.Emp_First||' '||E1.Emp_Last AS Employee,
+	S1.Emp_Num||':'||NVL(S1.Emp_First,'None')||' '||S1.Emp_Last AS Supervisor,
+	Training.Name AS Training_Name,
+	Training.Date_Acquired AS Training_Date,
+	Skill.Code||':'||Skill.Description AS Skill,
+	ROUND(MONTHS_BETWEEN(SYSDATE, Training.Date_Acquired)) AS MONTHS_SINCE_TRAINING,
+	COUNT(*) OVER(PARTITION BY E1.Emp_Num) AS Total_Trainings
+FROM EMPLOYEE E1 LEFT JOIN EMPLOYEE S1 ON E1.Super_ID = S1.Emp_Num
+		 LEFT JOIN TRAINING ON Training.Emp_Num = E1.Emp_Num
+		 JOIN SKILL ON SKILL.Code = Training.Code;
+-----Q11-----
+CLEAR COLUMNS
+COLUMN Employee FORMAT A30
+COLUMN UTILIZATION FORMAT A12
+
+SELECT  Employee,
+	ROUND(Utilization*100, 2)||'%' AS Utilization,
+	Rank,
+	CASE Rank
+		WHEN 1 THEN '$10,000'
+		WHEN 2 THEN '$9,000'
+		WHEN 3 THEN '$8,000'
+		WHEN 4 THEN '$7,000'
+		WHEN 5 THEN '$6,000'
+	END AS Bonus
+FROM(
+	SELECT  Emp_Num||':'||Emp_First||' '||Emp_Last AS Employee,
+		SUM(Hours_Used) AS Hours_Used,
+		ROUND((SYSDATE - MAX(Hire_Date)) / 7) * 40 as HOURS_SINCE,
+		SUM(Hours_Used) / (ROUND((SYSDATE - MAX(Hire_Date)) / 7) * 40) AS Utilization,
+		RANK() OVER(ORDER BY SUM(Hours_Used) / (ROUND((SYSDATE - MAX(Hire_Date)) / 7) * 40) DESC) AS Rank
+	FROM EMPLOYEE JOIN ASSIGNMENT USING (Emp_Num)
+	GROUP BY Emp_Num||':'||Emp_First||' '||Emp_Last)
+WHERE Rank <= 5;
+
+
+-----Q12-----
+CLEAR COLUMNS
+COLUMN table_name FORMAT A15
+COLUMN column_name FORMAT A15
+COLUMN constraint_name FORMAT A35
+COLUMN constraint_type FORMAT A15
+COLUMN search_condition FORMAT A40
+COLUMN parent_table FORMAT A15
+COLUMN parent_column FORMAT A15
+
+BREAK ON TABLE_NAME ON COLUMN_NAME
+
+SELECT  T1.table_name,
+	T1.column_name,
+	C1.constraint_name,
+	CASE    WHEN C2.constraint_type = 'P' THEN 'PK'
+		WHEN C2.constraint_type = 'R' THEN 'FK'
+		WHEN C2.constraint_type = 'C' AND T1.NULLABLE = 'N' THEN 'NN'	
+		WHEN C2.constraint_type = 'C' THEN 'CK'
+	END AS constraint_type,
+	C2.SEARCH_CONDITION,
+	F1.table_name as parent_table,
+	F1.column_name as parent_column
+FROM user_tab_columns T1
+LEFT JOIN user_cons_columns C1 
+	ON T1.table_name = C1.table_name
+	   AND T1.column_name = C1.column_name
+LEFT JOIN all_constraints C2
+	ON C1.constraint_name = C2.constraint_name
+LEFT JOIN user_cons_columns F1
+	ON F1.constraint_name = C2.r_constraint_name
+	   AND C2.constraint_type = 'R'
+ORDER BY (1), (2);
+
+
+
+

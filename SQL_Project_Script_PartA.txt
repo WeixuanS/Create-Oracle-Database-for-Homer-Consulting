@@ -1,0 +1,277 @@
+
+--Script to Drop Tables along with their Constraints--
+
+DROP TABLE SKILL   CASCADE CONSTRAINTS;
+DROP TABLE TRAINING      CASCADE CONSTRAINTS;
+DROP TABLE DEPARTMENT CASCADE CONSTRAINTS;
+DROP TABLE EMPLOYEE     CASCADE CONSTRAINTS;
+DROP TABLE CLIENT   CASCADE CONSTRAINTS;
+DROP TABLE PROJECT CASCADE CONSTRAINTS;
+DROP TABLE ASSIGNMENT CASCADE CONSTRAINTS;
+
+--Scripts to Create Tables along with their Constraints
+
+CREATE TABLE SKILL
+(Code        Varchar2(9)
+	CONSTRAINT Skill_SkillCode_PK PRIMARY KEY,
+ Description     Varchar2(25));
+
+CREATE TABLE CLIENT
+(Client_ID    Number(5)
+	CONSTRAINT Client_ClientID_PK PRIMARY KEY,
+ Name     Varchar2(50) CONSTRAINT Client_Name_IsNotNull_NN NOT NULL,
+ Street  Varchar2(50),
+ City      Varchar2(25),
+ State     Char(2),
+ Zip_Code  Char(5),
+ Industry  Varchar2(25),
+ Web_Address  Varchar2(50),
+ Phone  Char(12),
+ Contact_Name  Varchar2(50),
+--EXTRA CONSTRAINT 1
+ CONSTRAINT Client_Phone_LengthMoreThan9_CK CHECK (LENGTH(Phone)>9)); 
+
+CREATE TABLE EMPLOYEE
+(Emp_Num    Number(5)
+	CONSTRAINT Employee_EmployeeNum_PK PRIMARY KEY,
+ Emp_Last  Varchar2(25),
+ Emp_First  Varchar2(25) CONSTRAINT Employee_EmpFirst_IsNotNull_NN NOT NULL,
+ DOB  Date CONSTRAINT Employee_DOB_IsNotNull_NN NOT NULL,
+ Hire_Date  Date DEFAULT SYSDATE,
+ Super_ID  Number(5),
+ Dept_Code  Varchar2(9),
+ CONSTRAINT Employee_SuperID_FK FOREIGN KEY (Super_ID) REFERENCES EMPLOYEE (Emp_Num),
+--EXTRA CONSTRAINT 2
+ CONSTRAINT Employee_DOB_AgeAbove18_CK CHECK ((MONTHS_BETWEEN(Hire_Date,DOB)/12)>18)); 
+
+CREATE TABLE DEPARTMENT
+(Dept_Code  Varchar2(9)
+	CONSTRAINT Department_DeptCode_PK PRIMARY KEY,
+ Name  Varchar2(25)  CONSTRAINT Department_Name_IsNotNull_NN NOT NULL,
+ Location  Varchar2(50),
+ Phone  Char(12),
+ Manager_ID  Number(5),
+ CONSTRAINT Department_ManagerID_FK FOREIGN KEY (Manager_ID) REFERENCES EMPLOYEE (Emp_Num),
+--EXTRA CONSTRAINT 3
+ CONSTRAINT Department_Phone_LengthMoreThan9_CK CHECK (LENGTH(Phone)>9)); 
+
+
+ALTER TABLE EMPLOYEE
+ADD CONSTRAINT Employee_DeptCode_FK
+	FOREIGN KEY (Dept_Code)
+	REFERENCES DEPARTMENT (Dept_Code);
+
+
+CREATE TABLE TRAINING
+(Train_Num  Number(5)
+	CONSTRAINT Training_TrainingNum_PK PRIMARY KEY,
+ Code  Varchar2(9),
+ Emp_Num  Number(5),
+ Date_Acquired  Date,
+ Name  Varchar2(50)  CONSTRAINT Training_Name_IsNotNull_NN NOT NULL,
+ Comments  Varchar2(50),
+ CONSTRAINT Training_SkillCode_FK FOREIGN KEY (Code) REFERENCES SKILL (Code),
+ CONSTRAINT Training_EmpNum_FK FOREIGN KEY (Emp_Num) REFERENCES EMPLOYEE (Emp_Num));
+
+CREATE TABLE PROJECT
+(Proj_Number  Number(5)
+	CONSTRAINT Project_ProjectNumber_PK PRIMARY KEY,
+ Name  Varchar2(50)  CONSTRAINT Project_Name_IsNotNull_NN NOT NULL,
+ Start_Date Date DEFAULT SYSDATE,
+ Total_Cost  Number(6,2),
+ Dept_Code  Varchar2(9),
+ Client_ID Number(5),
+ CONSTRAINT Project_DeptCode_FK FOREIGN KEY (Dept_Code) REFERENCES DEPARTMENT (Dept_Code),
+ CONSTRAINT Project_ClientID_FK FOREIGN KEY (Client_ID) REFERENCES CLIENT (Client_ID));
+
+CREATE TABLE ASSIGNMENT
+(Assign_Num  Number(5)
+	CONSTRAINT Assignment_AssignNum_PK PRIMARY KEY,
+ Proj_Number  Number(5),
+ Emp_Num  Number(5),
+ Date_Assigned Date DEFAULT SYSDATE,
+ Date_Ended Date,
+ Hours_Used Number(6,2),
+ CONSTRAINT Assignment_ProjNumber_FK FOREIGN KEY (Proj_Number) REFERENCES PROJECT (Proj_Number),
+ CONSTRAINT Assignment_EmpNum_FK FOREIGN KEY (Emp_Num) REFERENCES EMPLOYEE (Emp_Num),
+ CONSTRAINT Assignment_DateEnded_CK CHECK (Date_Ended > Date_Assigned));
+
+
+--INSERT STATEMENTS FOR ALL TABLES
+
+INSERT INTO SKILL VALUES ('SQL_1009','Basic SQL Training');
+INSERT INTO SKILL VALUES ('SQL_1010','Advan SQL Training');
+INSERT INTO SKILL VALUES ('R_1012','Basic R Training');
+INSERT INTO SKILL VALUES ('R_1013','Advan R Training');
+INSERT INTO SKILL VALUES ('PY_1015','Basic Py Training');
+INSERT INTO SKILL VALUES ('PY_1016','Advan Py Training');
+INSERT INTO SKILL VALUES ('JAVA_1017','Basic Java Training');
+
+INSERT INTO CLIENT VALUES (1,'Port Authority Transit','212 Bellefonte St.','Pittsburgh','PA','15232','Government','www.pat.pittsburgh.com','700-121-4126','Codd Aim' );
+INSERT INTO CLIENT VALUES (2,'UPMC','2225 S. Negley Ave.','Pittsburgh','PA','15213','Hospital','www.upmc.medical.com','700-121-4126','Codd Bim');
+INSERT INTO CLIENT VALUES (3,'Carnegie Mellon University','330 Woodland Road','Pittsburgh','PA','15272','University','www.cmu.edu','700-122-4126','Codd Cim');
+INSERT INTO CLIENT VALUES (4,'XYZ','8 Marlborough Road','Pittsburgh','PA','15706','Hospital','www.xyz.org','700-123-4126','Codd Dim');
+INSERT INTO CLIENT VALUES (5,'Chatham University','33 Sydney Avenue','Pittsburgh','PA','15688','University','www.chatham.edu','700-124-4126','Codd Eim');
+INSERT INTO CLIENT VALUES (6,'Northrop Grumman','100 Broad Str.','Pittsburgh','PA','15271','Government','www.northropgrumman.org','700-125-4126','Codd Fim');
+INSERT INTO CLIENT VALUES (7,'PA Utilities','4000 Forbes Ave.','Pittsburgh','PA','15290','Government','www.pautilities.com','700-126-4126', 'Codd Iim');
+INSERT INTO CLIENT VALUES (8,'Duquesne University','88 Ocean Road','Pittsburgh','PA','15331','University','www.duquesne.edu','700-127-4126', 'Codd Kim');
+INSERT INTO CLIENT VALUES (9,'ABC','275 Brisbane Street','Pittsburgh','PA','15330','Hospital','www.abc.com','700-128-4126','Codd Lim');
+INSERT INTO CLIENT VALUES (10,'Cambridge Analytica','5825 Fifth Ave.','Pittsburgh','PA','15467','Government','www.cambridgeanalytica.com','700-129-4126', 'Codd Mim');
+
+
+INSERT INTO Employee VALUES (1,'Corman', 'Chris', '11-AUG-1990', '20-Oct-2014', NULL,NULL);
+INSERT INTO Employee VALUES (2,'Belli', 'Willam', '28-MAY-1992', '01-NOV-2015', NULL, NULL);
+INSERT INTO Employee VALUES (3,'Swift', 'Lisa', '17-FEB-1989', '01-NOV-2015', NULL, NULL);
+INSERT INTO Employee VALUES (4,'Milton', 'Kelly', '16-DEC-1988', '07-NOV-2015', NULL, NULL);
+INSERT INTO Employee VALUES (5,'Carter', 'Henry', '22-Apr-1995', '09-Jan-2016', 1, NULL);
+INSERT INTO Employee VALUES (6,'Bertram', 'Jill', '06-Jul-1992', '09-Jan-2016', 2, NULL);
+INSERT INTO Employee VALUES (7,'Gates', 'Bob', '26-Dec-1993', '04-Jun-2017', 3, NULL);
+INSERT INTO Employee VALUES (8,'Wheeler', 'Howard', '11-Jun-1993', '04-Jun-2016', 4, NULL);
+INSERT INTO Employee VALUES (9,'Whitestar', 'Mary', '24-Mar-1995', '25-Jan-2018', 1, NULL);
+INSERT INTO Employee VALUES (10,'Newton', 'Steve', '29-Jan-1997', '03-Jun-2019', 2, NULL);
+INSERT INTO Employee VALUES (11,'Hillman', 'Bill', '26-Dec-1994', '04-Jan-2018', 3, NULL);
+
+
+INSERT INTO Department VALUES ('100', 'Data Science', 'Heinz', '700-121-4121',1);
+INSERT INTO Department VALUES ('101', 'Data Engineering', 'Gates', '700-121-4122',2);
+INSERT INTO Department VALUES ('102', 'Data Lab', 'Hunt', '700-121-4123',3);
+INSERT INTO Department VALUES ('103', 'Administration', 'Tepper', '700-121-4124',4);
+
+
+UPDATE Employee
+SET Dept_Code = '100'
+WHERE Emp_Num = 1;
+
+UPDATE Employee
+SET Dept_Code = '101'
+WHERE Emp_Num = 2;
+
+UPDATE Employee
+SET Dept_Code = '102'
+WHERE Emp_Num = 3;
+
+UPDATE Employee
+SET Dept_Code = '103'
+WHERE Emp_Num = 4;
+
+UPDATE Employee
+SET Dept_Code = '100'
+WHERE Emp_Num = 5;
+
+UPDATE Employee
+SET Dept_Code = '101'
+WHERE Emp_Num = 6;
+
+UPDATE Employee
+SET Dept_Code = '102'
+WHERE Emp_Num = 7;
+
+UPDATE Employee
+SET Dept_Code = '103'
+WHERE Emp_Num = 8;
+
+UPDATE Employee
+SET Dept_Code = '100'
+WHERE Emp_Num = 9;
+
+UPDATE Employee
+SET Dept_Code = '101'
+WHERE Emp_Num = 10;
+
+UPDATE Employee
+SET Dept_Code = '102'
+WHERE Emp_Num = 11;
+
+
+
+INSERT INTO TRAINING VALUES (110, 'SQL_1009', 1, '09-Jan-2017', 'SQL1', 'Good');
+INSERT INTO TRAINING VALUES (111, 'SQL_1009', 2, '07-Jan-2017', 'SQL2', 'Bad');
+INSERT INTO TRAINING VALUES (112, 'SQL_1010', 3, '10-Feb-2018', 'SQL3', 'Excellent');
+INSERT INTO TRAINING VALUES (113, 'R_1012', 4, '09-Mar-2017', 'R1', 'Fair');
+INSERT INTO TRAINING VALUES (114, 'R_1013', 5, '09-Aug-2019', 'R2', 'Right');
+INSERT INTO TRAINING VALUES (115, 'R_1013', 6, '11-Sep-2018', 'R3', 'Wrong');
+INSERT INTO TRAINING VALUES (116, 'PY_1015', 7, '03-Dec-2017', 'PY1', 'True');
+INSERT INTO TRAINING VALUES (117, 'PY_1016', 8, '05-Jun-2019', 'PY2', 'False');
+INSERT INTO TRAINING VALUES (118, 'PY_1016', 9, '09-Oct-2018', 'PY3', 'Perfect');
+INSERT INTO TRAINING VALUES (119, 'JAVA_1017', 10, '01-May-2017', 'JAVA1', 'Yes');
+INSERT INTO TRAINING VALUES (120, 'PY_1015', 11, '01-May-2018', 'PY1', 'Yes');
+INSERT INTO TRAINING VALUES (121, 'PY_1016', 7, '03-Jan-2018', 'PY2', 'True');
+
+
+INSERT INTO PROJECT VALUES (121, 'ResearchOptmization', '09-Oct-2018', 5000, '101', 2);
+INSERT INTO PROJECT VALUES (122, 'QualityAssurance', '15-Nov-2018', 3000, '102', 5);
+INSERT INTO PROJECT VALUES (123, 'CostOptimization', '04-Mar-2019', 6000, '102', 7);
+INSERT INTO PROJECT VALUES (124, 'ProjectManagement', '20-Aug-2018', 7000, '101', 3);
+INSERT INTO PROJECT VALUES (125, 'BigData', '24-Oct-2019', 1000, '101', 6);
+INSERT INTO PROJECT VALUES (126, 'FundRaising', '06-Sep-2018', 2000, '102', 1);
+INSERT INTO PROJECT VALUES (127, 'BusinessWriting', '21-Apr-2019', 4000, '101', 8);
+INSERT INTO PROJECT VALUES (128, 'HealthPolicy', '18-Dec-2018', 5500, '100', 4);
+INSERT INTO PROJECT VALUES (129, 'Marketing', '09-Sep-2019', 7600, '100', 9);
+INSERT INTO PROJECT VALUES (130, 'DataWarehouse', '27-Sep-2019', NULL, '100', 10);
+
+
+INSERT INTO ASSIGNMENT VALUES (201, 125, 1, '24-Oct-2019', '30-Oct-2019', 40);
+INSERT INTO ASSIGNMENT VALUES (202, 125, 1, '01-Nov-2019', '28-Nov-2019', 100);
+INSERT INTO ASSIGNMENT VALUES (203, 121, 2, '15-Oct-2018', '30-Oct-2018', 80);
+INSERT INTO ASSIGNMENT VALUES (204, 126, 3, '13-Sep-2018', '30-Sep-2018', 100);
+INSERT INTO ASSIGNMENT VALUES (205, 126, 3, '01-Oct-2018', '30-Oct-2018', 160);
+INSERT INTO ASSIGNMENT VALUES (206, 123, 7, '04-Mar-2019', '31-Mar-2019', 150);
+INSERT INTO ASSIGNMENT VALUES (207, 123, 7, '01-Apr-2019', '30-Apr-2019', 160);
+INSERT INTO ASSIGNMENT VALUES (208, 127, 6, '21-Apr-2019', '30-Apr-2019', 60);
+INSERT INTO ASSIGNMENT VALUES (209, 127, 6, '01-May-2019', '30-May-2019', 160);
+INSERT INTO ASSIGNMENT VALUES (210, 128, 5, '18-Dec-2018', '31-Dec-2018', 120);
+INSERT INTO ASSIGNMENT VALUES (211, 122, 11, '15-Nov-2018', '30-Nov-2018', 80);
+INSERT INTO ASSIGNMENT VALUES (212, 122, 11, '01-Dec-2018', '31-Dec-2018', 160);
+INSERT INTO ASSIGNMENT VALUES (213, 130, 9, '27-Sep-2019', '30-Sep-2019', 32);
+INSERT INTO ASSIGNMENT VALUES (214, 130, 9, '01-Nov-2019', NULL, NULL);
+INSERT INTO ASSIGNMENT VALUES (215, 129, 5, '09-Sep-2019', '30-Sep-2019', 96);
+INSERT INTO ASSIGNMENT VALUES (216, 124, 2, '20-Aug-2018', '30-Aug-2018', 72);
+INSERT INTO ASSIGNMENT VALUES (217, 124, 2, '01-Jan-2019', '31-Jan-2019', 160);
+
+----- COMMIT AND PURGE RECYCLE BIN -----
+COMMIT;
+PURGE RECYCLEBIN;
+
+
+
+----- SELECT CONTENTS OF ALL TABLES -----
+
+SELECT * FROM SKILL;
+
+
+CLEAR COLUMNS
+COLUMN Date_Acquired FORMAT A15
+SELECT * FROM TRAINING;
+
+SELECT * FROM DEPARTMENT;
+
+SELECT * FROM EMPLOYEE;
+
+CLEAR COLUMNS
+COLUMN Client_ID FORMAT 999
+COLUMN Name FORMAT A30
+COLUMN Street FORMAT A25
+COLUMN City FORMAT A15
+COLUMN State FORMAT A5
+COLUMN Zip_Code FORMAT A8
+COLUMN Web_Address FORMAT A30
+COLUMN Contact_Name FORMAT A20
+COLUMN INDUSTRY FORMAT A20
+
+SELECT * FROM CLIENT;
+
+CLEAR COLUMNS
+COLUMN Start_Date FORMAT A15
+COLUMN Total_Cost FORMAT $999,990.99
+
+SELECT * FROM PROJECT;
+
+
+CLEAR COLUMNS
+COLUMN Date_Assigned FORMAT A15
+COLUMN Date_Ended FORMAT A15
+
+SELECT * FROM ASSIGNMENT;
+
+
+
